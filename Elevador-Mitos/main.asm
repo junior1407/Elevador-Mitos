@@ -24,10 +24,15 @@
 ;cbi PORTD, 2
 
 reset: 
+
+; Enables PCINT 4 TO 0, but 1 (the buzzer).
+ldi temp, 0b00011101;
+sts PCMSK0, temp 
+
+
 ; Enables PCINT 23 TO 20
 ldi temp, 0b11110000
 sts PCMSK2, temp 
-;PCMSK2,11110000  ;
 
 ; Setar interrupções botoes
 
