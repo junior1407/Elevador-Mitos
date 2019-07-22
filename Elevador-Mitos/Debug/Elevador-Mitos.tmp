@@ -1,0 +1,27 @@
+<ASSEMBLER_INFO>
+ <VERSION>2.2.7</VERSION>
+ <DEVICE>"ATmega328P"</DEVICE>
+ <WORKING_DIR>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\Debug</WORKING_DIR>
+ <INCLUDE_PATH>
+  <DIR>D:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.209\avrasm\inc</DIR>
+  <DIR>D:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avrassembler\Include</DIR>
+  <DIR></DIR>
+ </INCLUDE_PATH>
+ <SOURCE_FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</SOURCE_FILE>
+ <INCLUDED_FILES>
+  <FILE>D:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.209\avrasm\inc\m328pdef.inc</FILE>
+ </INCLUDED_FILES>
+ <OBJECT_FILES>
+  <FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\Debug\Elevador-Mitos.obj</FILE>
+ </OBJECT_FILES>
+ <HEX_FILES>
+  <FILE>Elevador-Mitos.hex</FILE>
+ </HEX_FILES>
+ <OUTPUT_FILES>
+  <FILE>Elevador-Mitos.map</FILE>
+  <FILE>Elevador-Mitos.lss</FILE>
+ </OUTPUT_FILES>
+ <LABELS>
+  <reset><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>26</LINE></reset>
+ </LABELS>
+</ASSEMBLER_INFO>
