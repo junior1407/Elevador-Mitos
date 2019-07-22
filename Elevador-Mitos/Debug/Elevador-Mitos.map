@@ -1,5 +1,5 @@
 
-AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm Mon Jul 22 20:00:19 2019
+AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm Mon Jul 22 20:41:35 2019
 
 
 EQU  SIGNATURE_000 0000001e
@@ -695,5 +695,10 @@ EQU  ACIaddr      0000002e
 EQU  TWIaddr      00000030
 EQU  SPMRaddr     00000032
 EQU  INT_VECTORS_SIZE 00000034
-CSEG reset        00000004
+CSEG reset        0000001b
+CSEG OC1A_Interrupt 00000018
 DEF  temp         r16
+EQU  PRESCALE     00000004
+EQU  PRESCALE_DIV 00000100
+EQU  WGM          00000004
+EQU  TOP          0000f424

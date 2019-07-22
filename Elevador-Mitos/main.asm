@@ -4,9 +4,15 @@
 ;	jmp handle_pb0
 .org INT1addr ; INT1addr is the address of EXT_INT1
 ;	jmp handle_pb1
+.org OC1Aaddr
+	jmp OC1A_Interrupt
 
 .def temp = r16
 
+OC1A_Interrupt:
+	nop
+	nop
+	reti
 ;A do BCD = PD2 ; PCINT18
 ;B do BCD = PD3 ; PCINT19
 ;0 do Elevador = PD4 ; PCINT20
@@ -24,7 +30,7 @@
 ;cbi PORTD, 2
 
 reset: 
-
+cli
 ; Enables PCINT 4 TO 0, but 1 (the buzzer).
 ldi temp, 0b00011101;
 sts PCMSK0, temp 
@@ -34,8 +40,32 @@ sts PCMSK0, temp
 ldi temp, 0b11110000
 sts PCMSK2, temp 
 
-; Setar interrupções botoes
+#define CLOCK 16.0e6 ;clock speed
+.equ PRESCALE = 0b100 ;/256 prescale
+.equ PRESCALE_DIV = 256
 
+#define DELAY 1 ;seconds
+.equ WGM = 0b0100 ;Waveform generation mode: CTC
+;you must ensure this value is between 0 and 65535
+.equ TOP = int(0.5 + ((CLOCK/PRESCALE_DIV)*DELAY))
+.if TOP > 65535
+.error "TOP is out of range"
+.endif
+
+;On MEGA series, write high byte of 16-bit timer registers first
+ldi temp, high(TOP) ;initialize compare value (TOP)
+sts OCR1AH, temp
+ldi temp, low(TOP)
+sts OCR1AL, temp
+ldi temp, ((WGM&0b11) << WGM10) ;lower 2 bits of WGM 
+sts TCCR1A, temp
+;upper 2 bits of WGM and clock select
+ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
+sts TCCR1B, temp ;start counter
+
+lds r16, TIMSK1
+sbr r16, 1 <<OCIE1A
+sts TIMSK1, r16
 
 
 ;Stack initialization
