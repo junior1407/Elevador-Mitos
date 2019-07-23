@@ -22,7 +22,9 @@
   <FILE>Elevador-Mitos.lss</FILE>
  </OUTPUT_FILES>
  <LABELS>
-  <reset><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>32</LINE></reset>
-  <OC1A_Interrupt><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>12</LINE></OC1A_Interrupt>
+  <reset><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>44</LINE></reset>
+  <handle_INT0><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>14</LINE></handle_INT0>
+  <handle_INT2><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>20</LINE></handle_INT2>
+  <OC1A_Interrupt><FILE>C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm</FILE><LINE>24</LINE></OC1A_Interrupt>
  </LABELS>
 </ASSEMBLER_INFO>

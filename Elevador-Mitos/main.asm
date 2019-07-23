@@ -1,16 +1,28 @@
 .org 0x000
 	jmp reset
-.org INT0addr ; INT0addr is the address of EXT_INT0
-;	jmp handle_pb0
-.org INT1addr ; INT1addr is the address of EXT_INT1
-;	jmp handle_pb1
+.org 0x0006 
+	jmp handle_INT0
+.org 0x000A
+	jmp handle_INT2
 .org OC1Aaddr
 	jmp OC1A_Interrupt
 
 .def temp = r16
 
+
+
+handle_INT0:
+	ldi temp, 1
+	reti
+
+
+
+handle_INT2:
+	ldi temp, 1
+	reti
+
 OC1A_Interrupt:
-	nop
+	ldi temp, 1
 	nop
 	reti
 ;A do BCD = PD2 ; PCINT18
@@ -31,6 +43,10 @@ OC1A_Interrupt:
 
 reset: 
 cli
+;Pin change Interrupt (23:16) and (0:7)
+ldi temp, 0b00000101;
+sts PCICR, temp
+ 
 ; Enables PCINT 4 TO 0, but 1 (the buzzer).
 ldi temp, 0b00011101;
 sts PCMSK0, temp 
