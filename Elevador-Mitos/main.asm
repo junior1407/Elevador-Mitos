@@ -6,38 +6,60 @@
 	jmp handle_INT2
 .org OC1Aaddr
 	jmp OC1A_Interrupt
-.def contagem = r17
+.def andar = r17
 .def temp = r16
-.def oldINT0 = r0
-.def oldINT2 = r2
 
-	ldi temp, 1
-	reti
+.def botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
+.equ botoesE0 = 6
+.equ botoesE1 = 5
+.equ botoesE2 = 4
+.equ botoesI0 = 2
+.equ botoesI1 = 1
+.equ botoesI2 = 0
 
+.def contador = r19
+
+.def flags = r20  ;  0000  0-0-Estado-Porta
+.equ flagsPorta = 0
+.equ flagsEstado = 1
+
+.def destino = r21
+
+
+startTimer:
+	ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
+	sts TCCR1B, temp ;start counter
+	ret
+
+resetTimer:
+	ldi temp, 0
+	sts TCNT1H, temp
+	sts TCNT1L, temp
+	ret
+
+stopTimer:
+	ldi temp, 0
+	sts TCCR1B, temp ;stop counter
+	ret
 
 delay20ms:
 	push r22
 	push r21
 	push r20
-
-	ldi r22, byte3(16*1000*20 / 5)
+	ldi r22,byte3(16*1000*20 / 5)
 	ldi r21, high(16*1000*20 / 5)
 	ldi r20, low(16*1000*20 / 5)
-
 	subi r20,1
 	sbci r21,0
 	sbci r22,0
 	brcc pc-3
-
 	pop r20
 	pop r21
 	pop r22
 	ret
 
-
-
 handle_INT0:
-	.def temp2 = r18;
+	.def temp2 = r22;
 	cli ; TODO: Só desligar essa interrupção
 	push temp2
 	; Fechar do Elevador = PB0; PCINT0
@@ -76,7 +98,7 @@ handle_INT0:
 
 
 handle_INT2:
-	.def temp2 = r18;
+	.def temp2 = r22;
 	cli ; TODO: Só desligar essa interrupção
 	push temp2
 	;0 do Elevador = PD4 ; PCINT20
@@ -158,7 +180,7 @@ sts PCMSK2, temp
 .equ PRESCALE = 0b100 ;/256 prescale
 .equ PRESCALE_DIV = 256
 
-#define DELAY 1 ;seconds
+#define DELAY 0.5 ;seconds
 .equ WGM = 0b0100 ;Waveform generation mode: CTC
 ;you must ensure this value is between 0 and 65535
 .equ TOP = int(0.5 + ((CLOCK/PRESCALE_DIV)*DELAY))
@@ -174,8 +196,7 @@ sts OCR1AL, temp
 ldi temp, ((WGM&0b11) << WGM10) ;lower 2 bits of WGM 
 sts TCCR1A, temp
 ;upper 2 bits of WGM and clock select
-ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
-sts TCCR1B, temp ;start counter
+call startTimer
 
 lds r16, TIMSK1
 sbr r16, 1 <<OCIE1A
@@ -191,5 +212,25 @@ out SPH, temp
 ;getInts current values
 ;in 
 
+sbr flags, 1;  Inicia flags com porta fechada.
 sei ;Enable Interrupts
-rjmp pc; Infinite Loop
+main:
+	; IF flagEstado==1 (Em movimento)
+	sbrc flags, flagsEstado
+	jmp estado_em_movimento
+		estado_parado:
+		sbrs flags, flagsPorta
+		jmp porta_aberta
+		if_porta_fechada:
+		; =1 Fechada
+
+	rjmp main
+		estado_em_movimento:
+			rjmp main; Infinite Loop
+		porta_aberta:
+			cpi botoes, 0 ; Algum botão pressionado
+			brlt if_porta_fechada
+			;StartTimer();
+			
+
+			rjmp main
