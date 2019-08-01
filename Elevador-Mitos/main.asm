@@ -26,7 +26,7 @@
 
 
 
-frase1: .db "Portas Fechando"
+frase1: .db "Portas  Fechando"
 frase2: .db "Portas Abrindo"
 ; TODO: Escrever todas frases.
 
@@ -40,7 +40,8 @@ frase2: .db "Portas Abrindo"
 .equ botoesI0 = 2
 .equ botoesI1 = 1
 .equ botoesI2 = 0
-
+.equ B = 2
+.equ A = 3
 .def contador = r19
 
 .def flags = r20  ;  0000  0-0-Estado-Porta
@@ -51,6 +52,38 @@ frase2: .db "Portas Abrindo"
 
 
 
+
+atualiza_display:
+	.def temp2 = r22
+	push temp2
+	in temp, PIND
+	cpi andar, 0
+	breq atualiza_0
+	cpi andar, 1
+	breq atualiza_1
+	cpi andar, 2
+	breq atualiza_2
+	jmp end_atualiza
+	atualiza_0:
+		cbr temp, (1 << A) || (1 << B)
+		jmp end_atualiza
+	atualiza_1:
+		cbr temp, (1 << B)
+		sbr temp, (1 << A)
+		jmp end_atualiza
+	atualiza_2:
+		cbr temp, (1 << A)
+		sbr temp, (1 << B)
+		jmp end_atualiza
+
+	; PORTD = xxxxABxx
+	end_atualiza:
+	out PORTD, temp
+	pop temp2
+	.undef temp2
+	ret
+	; A = 3 PD3
+	; B = 2 PD2
 
 liga_led:
 	in temp, PINB
@@ -325,10 +358,10 @@ sts PCMSK2, temp
 .equ PRESCALE = 0b100 ;/256 prescale
 .equ PRESCALE_DIV = 256
 
-#define DELAY 0.5 ;seconds
+#define DELAY 0.2 ;seconds
 .equ WGM = 0b0100 ;Waveform generation mode: CTC
 ;you must ensure this value is between 0 and 65535
-.equ TOP = int(0.5 + ((CLOCK/PRESCALE_DIV)*DELAY))
+.equ TOP = int(0.2 + ((CLOCK/PRESCALE_DIV)*DELAY))
 .if TOP > 65535
 .error "TOP is out of range"
 .endif
@@ -409,7 +442,7 @@ andar_0:
 	rjmp andar_0_I1_E1
 	sbrc botoes, botoesE1
 	rjmp andar_0_I1_E1
-
+	rjmp main
 	andar_0_I0_E0:
 		call abre
 		cbr botoes, (1 << botoesE0)||(1<<botoesI0) ; Dá Clear nos botões E0(bit6) e I0(bit2). 
