@@ -9,9 +9,26 @@
 .org 0x0028
     jmp USART_TX_Complete
 
+;A do BCD = PD2 ; PCINT18
+;B do BCD = PD3 ; PCINT19
+;0 do Elevador = PD4 ; PCINT20
+;1 do Elevador = PD5 ; PCINT21
+;2 do Elevador = PD6 ; PCINT22
+;Abrir do Elevador = PD7; PCINT23
+
+; Fechar do Elevador = PB0; PCINT0
+; Buzzer = PB1;  PCINT1
+; Chamar 0 = PB2; PCINT2
+; Chamar 1 = PB3; PCINT3 
+; Chamar 2  = PB4; PCINT4
+; LED = PB5
+
+
+
+
 frase1: .db "Portas Fechando"
 frase2: .db "Portas Abrindo"
-
+; TODO: Escrever todas frases.
 
 .def andar = r17
 .def temp = r16
@@ -34,6 +51,46 @@ frase2: .db "Portas Abrindo"
 
 
 
+
+liga_led:
+	in temp, PINB
+	sbr temp, ( 1<<5) ; Seta pino do led ON
+	out PORTB, temp
+	ret
+
+apaga_led:
+	in temp, PINB
+	cbr temp, ( 1<<5 ) ; Seta pino do led OFF
+	out PORTB, temp
+	ret
+
+liga_buzzer:
+	in temp, PINB
+	sbr temp, (1<< 1) ;Buzzer ON
+	out PORTB, temp
+	ret
+apaga_buzzer:
+	in temp, PINB
+	cbr temp, (1<< 1) ;Buzzer OFF
+	out PORTB, temp
+	ret
+
+abre:
+	call resetTimer
+	cbr flags, (1 <<flagsPortaFechada)
+	call liga_led
+	call startTimer
+	ret
+
+fecha:
+	sbr flags, (1 <<flagsPortaFechada)
+	in temp, PINB
+	cbr temp, ( 1<<5 || 1<< 1) ; Seta pino do led OFF e Buzzer OFF
+	out PORTB, temp
+	call stopTimer
+	call resetTimer
+	ret
+
 startTimer:
 	ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
 	sts TCCR1B, temp ;start counter
@@ -43,6 +100,7 @@ resetTimer:
 	ldi temp, 0
 	sts TCNT1H, temp
 	sts TCNT1L, temp
+	ldi contador, 0
 	ret
 
 stopTimer:
@@ -67,6 +125,7 @@ delay20ms:
 	ret
 
 USART_TX_Complete:
+	; TODO; Fazer instrucao
 	nop
 	reti
 
@@ -91,28 +150,31 @@ handle_INT0:
 	jmp botao_chamar2_ext_pressionado
 	jmp end_handle_int0
 	botao_chamar0_ext_pressionado:
-
+		sbr botoes, ( 1<<botoesE0)
 		jmp end_handle_int0
 	botao_chamar1_ext_pressionado:
-
+		sbr botoes, ( 1<<botoesE1)
 		jmp end_handle_int0
 	botao_chamar2_ext_pressionado:
-		
+		sbr botoes, ( 1<<botoesE2)
 		jmp end_handle_int0
 	botao_fechar_pressionado:
-		; TODO: FECHAR PORTA
+		sbrc flags, flagsPortaFechada
+		jmp end_handle_int0
+		sbrs flags, flagsEstado
+		call fecha
 		jmp end_handle_int0
 
 	end_handle_int0:
 	pop temp2
 	.undef temp2
-	sei; TODO: Só religar essa interrupção
+	sei
 	reti
 
 
 handle_INT2:
 	.def temp2 = r22;
-	cli ; TODO: Só desligar essa interrupção
+	cli 
 	push temp2
 	;0 do Elevador = PD4 ; PCINT20
 	;1 do Elevador = PD5 ; PCINT21
@@ -120,65 +182,113 @@ handle_INT2:
 	;Abrir do Elevador = PD7; PCINT23
 	in temp2, PIND
 	call delay20ms;Debouncing
-	sbrc temp2,4
+	
+	sbrc temp2,4 
 	jmp botao_chamar_I0_pressionado
+	
 	sbrc temp2,5
 	jmp botao_chamar1_in_pressionado
+	
 	sbrc temp2,6
 	jmp botao_chamar2_in_pressionado
+	
 	sbrc temp2,7
 	jmp botao_abrir_pressionado
+	
 	jmp end_handle_int1
 	botao_chamar_I0_pressionado:
-		;TODO 
+		sbr botoes, ( 1<<botoesI0)
 		jmp end_handle_int1
 	botao_chamar1_in_pressionado:
-
+		sbr botoes, ( 1<<botoesI1)
 		jmp end_handle_int1
 	botao_chamar2_in_pressionado:
-
+		sbr botoes, ( 1<<botoesI2)
 		jmp end_handle_int1
 	botao_abrir_pressionado:
-
+		sbrs flags, flagsEstado
+		call abre
 		jmp end_handle_int1
 
 	end_handle_int1:
 	pop temp2
 	.undef temp2
-	sei; TODO: Só religar essa interrupção
+	sei
 	reti
 
 
 OC1A_Interrupt:
-	ldi temp, 1
-	nop
+	cli
+	;TODO
+	subi contador, -1
+	sbrc flags, flagsEstado
+	jmp timer_estado_em_movimento
+	timer_estado_parado:
+		sbrc flags, flagsPortaFechada
+		jmp timer_end
+		cpi contador, 5
+		breq contador_5
+		cpi contador, 10
+		breq contador_10
+		jmp timer_end
+    contador_5:
+		call liga_buzzer
+		jmp timer_end
+	contador_10:
+		call apaga_buzzer
+		sbr flags, (1 << flagsPortaFechada) 
+		call stopTimer
+		call resetTimer
+		jmp timer_end
+	timer_estado_em_movimento:
+		cpi contador, 3
+		breq contador_3
+		jmp timer_end
+	contador_3:
+		mov andar, destino
+		cbr flags, (1 << flagsEstado)
+		call stopTimer
+		call resetTimer
+		jmp timer_end
+
+
+
+	; if Estado (em movimento == 1)
+	;		contador == 3
+			;	ANDAR = DESTINO
+			;	ESTADO = PARADO
+			;	stopTimer()
+			;	resetTimer()
+	; if Estado parado == 0
+	;		if porta == aberta == 0
+		;		if contador == 5
+					;BUZZER == 1
+		;		if contador == 10
+					;BUZZER =  0;
+					;PORTA = FECHADA;
+					;stopTimer();
+					;resetTimer();
+	timer_end:
+	sei
 	reti
-;A do BCD = PD2 ; PCINT18
-;B do BCD = PD3 ; PCINT19
-;0 do Elevador = PD4 ; PCINT20
-;1 do Elevador = PD5 ; PCINT21
-;2 do Elevador = PD6 ; PCINT22
-;Abrir do Elevador = PD7; PCINT23
 
-; Fechar do Elevador = PB0; PCINT0
-; Buzzer = PB1;  PCINT1
-; Chamar 0 = PB2; PCINT2
-; Chamar 1 = PB3; PCINT3 
-; Chamar 2  = PB4; PCINT4
-
-
-;sbi PORTD, 2
-;cbi PORTD, 2
 
 reset: 
 cli
 
+;CONFIG PORTB E PORTD como entrada e saida
+ldi temp,0b00100010
+out DDRB, temp
+ldi temp, 0b00001100
+out DDRD, temp
+
+
+;Teste da USART
 ldi zl,low(frase1*2)
 ldi zh,high(frase1*2)
 lpm temp, Z
 
 .equ UBRRvalue = 103
-
 ;USART_INIT
 ;baud rate
 ldi temp, high (UBRRvalue) 
@@ -252,6 +362,8 @@ ldi flags, 0b00000001 ; Porta fechada e Parado.
 
 sei ;Enable Interrupts
 main:
+
+;TODO: Ficar printando andar no display usando PIND/B  e PORTD/B
 	; IF flagEstado==1 (Em movimento)
 	sbrc flags, flagsEstado
 	rjmp estado_em_movimento
@@ -262,7 +374,7 @@ main:
 				cp destino, andar
 				breq if_parado_porta_aberta_ou_fechada
 				if_porta_fechada_destino_diff_atual:
-					sbr flags, 2 ; 0000 0010  = Ativa Estado em Movimento
+					sbr flags, (1 << flagsEstado) ; Ativa Estado em Movimento
 					rcall startTimer
 					rjmp if_parado_porta_aberta_ou_fechada	
 
@@ -299,7 +411,7 @@ andar_0:
 	rjmp andar_0_I1_E1
 
 	andar_0_I0_E0:
-		;TODO: abre()
+		call abre
 		cbr botoes, (1 << botoesE0)||(1<<botoesI0) ; Dá Clear nos botões E0(bit6) e I0(bit2). 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
@@ -327,7 +439,7 @@ andar_1:
 	rjmp andar_0_I1_E1
 
 	andar_1_I1_E1:
-		;TODO: abre()
+		call abre
 		cbr botoes, (1 << botoesE1)||(1<<botoesI1) ; Dá Clear nos botões E1 e I1. 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
@@ -358,7 +470,7 @@ andar_2:
 	rjmp andar_0_I1_E1
 
 	andar_2_I2_E2:
-		;TODO: abre()
+		call abre
 		cbr botoes, (1 << botoesE2)||(1<<botoesI2) ; Dá Clear nos botões E1 e I1. 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
