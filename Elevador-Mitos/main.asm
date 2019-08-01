@@ -6,6 +6,13 @@
 	jmp handle_INT2
 .org OC1Aaddr
 	jmp OC1A_Interrupt
+.org 0x0028
+    jmp USART_TX_Complete
+
+frase1: .db "Portas Fechando"
+frase2: .db "Portas Abrindo"
+
+
 .def andar = r17
 .def temp = r16
 
@@ -58,6 +65,11 @@ delay20ms:
 	pop r21
 	pop r22
 	ret
+
+USART_TX_Complete:
+	nop
+	reti
+
 
 handle_INT0:
 	.def temp2 = r22;
@@ -160,6 +172,31 @@ OC1A_Interrupt:
 
 reset: 
 cli
+
+ldi zl,low(frase1*2)
+ldi zh,high(frase1*2)
+lpm temp, Z
+
+.equ UBRRvalue = 103
+
+;USART_INIT
+;baud rate
+ldi temp, high (UBRRvalue) 
+sts UBRR0H, temp
+ldi temp, low (UBRRvalue)
+sts UBRR0L, temp
+;ENABLE TRANSMITTER
+ldi temp, 1<<TXEN0
+sts UCSR0B, temp
+
+;8data, 1 stop, no parity
+ldi temp, (3<<UCSZ00)
+sts UCSR0C, temp
+
+ldi temp, (1<<TXCIE0)| (1 << TXEN0)
+sts UCSR0B, temp; enable transmit and transmit interrupt
+
+
 ;Pin change Interrupt (23:16) and (0:7)
 ldi temp, 0b00000101;
 sts PCICR, temp

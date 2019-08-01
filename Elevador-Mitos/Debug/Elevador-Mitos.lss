@@ -1,5 +1,5 @@
 
-AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm Mon Jul 29 22:52:04 2019
+AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm Thu Aug 01 00:07:57 2019
 
 [builtin](2): Including file 'D:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.209\avrasm\inc\m328pdef.inc'
 [builtin](2): Including file 'D:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.2.209\avrasm\inc\m328pdef.inc'
@@ -985,13 +985,34 @@ AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elev
                                  
                                  ; ***** END OF FILE ******************************************************
                                  
-000000 940c 0073                 	jmp reset
+000000 940c 0096                 	jmp reset
                                  .org 0x0006 
-000006 940c 0034                 	jmp handle_INT0
+000006 940c 0057                 	jmp handle_INT0
                                  .org 0x000A
-00000a 940c 0052                 	jmp handle_INT2
+00000a 940c 0075                 	jmp handle_INT2
                                  .org OC1Aaddr
-000016 940c 0070                 	jmp OC1A_Interrupt
+000016 940c 0093                 	jmp OC1A_Interrupt
+                                 .org 0x0028
+000028 940c 0055                     jmp USART_TX_Complete
+                                 
+00002a 6f50
+00002b 7472
+00002c 7361
+00002d 4620
+00002e 6365
+00002f 6168
+000030 646e
+C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elevador-Mitos\main.asm(12): warning: .cseg .db misalignment - padding zero byte
+000031 006f                      frase1: .db "Portas Fechando"
+000032 6f50
+000033 7472
+000034 7361
+000035 4120
+000036 7262
+000037 6e69
+000038 6f64                      frase2: .db "Portas Abrindo"
+                                 
+                                 
                                  .def andar = r17
                                  .def temp = r16
                                  
@@ -1006,126 +1027,132 @@ AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elev
                                  .def contador = r19
                                  
                                  .def flags = r20  ;  0000  0-0-Estado-Porta
-                                 .equ flagsPorta = 0
-                                 .equ flagsEstado = 1
+                                 .equ flagsPortaFechada = 0   ; 1 - Fechada, 0 - Aberta
+                                 .equ flagsEstado = 1 ;  0 - Parado; 1 Em movimento
                                  
                                  .def destino = r21
                                  
                                  
+                                 
                                  startTimer:
-000018 e00c                      	ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
-000019 9300 0081                 	sts TCCR1B, temp ;start counter
-00001b 9508                      	ret
+000039 e00c                      	ldi temp, ((WGM>> 2) << WGM12)|(PRESCALE << CS10)
+00003a 9300 0081                 	sts TCCR1B, temp ;start counter
+00003c 9508                      	ret
                                  
                                  resetTimer:
-00001c e000                      	ldi temp, 0
-00001d 9300 0085                 	sts TCNT1H, temp
-00001f 9300 0084                 	sts TCNT1L, temp
-000021 9508                      	ret
+00003d e000                      	ldi temp, 0
+00003e 9300 0085                 	sts TCNT1H, temp
+000040 9300 0084                 	sts TCNT1L, temp
+000042 9508                      	ret
                                  
                                  stopTimer:
-000022 e000                      	ldi temp, 0
-000023 9300 0081                 	sts TCCR1B, temp ;stop counter
-000025 9508                      	ret
+000043 e000                      	ldi temp, 0
+000044 9300 0081                 	sts TCCR1B, temp ;stop counter
+000046 9508                      	ret
                                  
                                  delay20ms:
-000026 936f                      	push r22
-000027 935f                      	push r21
-000028 934f                      	push r20
-000029 e060                      	ldi r22,byte3(16*1000*20 / 5)
-00002a ef5a                      	ldi r21, high(16*1000*20 / 5)
-00002b e040                      	ldi r20, low(16*1000*20 / 5)
-00002c 5041                      	subi r20,1
-00002d 4050                      	sbci r21,0
-00002e 4060                      	sbci r22,0
-00002f f7e0                      	brcc pc-3
-000030 914f                      	pop r20
-000031 915f                      	pop r21
-000032 916f                      	pop r22
-000033 9508                      	ret
+000047 936f                      	push r22
+000048 935f                      	push r21
+000049 934f                      	push r20
+00004a e060                      	ldi r22,byte3(16*1000*20 / 5)
+00004b ef5a                      	ldi r21, high(16*1000*20 / 5)
+00004c e040                      	ldi r20, low(16*1000*20 / 5)
+00004d 5041                      	subi r20,1
+00004e 4050                      	sbci r21,0
+00004f 4060                      	sbci r22,0
+000050 f7e0                      	brcc pc-3
+000051 914f                      	pop r20
+000052 915f                      	pop r21
+000053 916f                      	pop r22
+000054 9508                      	ret
+                                 
+                                 USART_TX_Complete:
+000055 0000                      	nop
+000056 9518                      	reti
+                                 
                                  
                                  handle_INT0:
                                  	.def temp2 = r22;
-000034 94f8                      	cli ; TODO: Só desligar essa interrupção
-000035 936f                      	push temp2
+000057 94f8                      	cli ; TODO: Só desligar essa interrupção
+000058 936f                      	push temp2
                                  	; Fechar do Elevador = PB0; PCINT0
                                  	; Chamar 0 = PB2; PCINT2
                                  	; Chamar 1 = PB3; PCINT3 
                                  	; Chamar 2  = PB4; PCINT4
-000036 b163                      	in temp2, PINB
-000037 940e 0026                 	call delay20ms;Debouncing
-000039 fd60                      	sbrc temp2,0
-00003a 940c 004d                 	jmp botao_fechar_pressionado
-00003c fd62                      	sbrc temp2,2
-00003d 940c 0047                 	jmp botao_chamar0_ext_pressionado
-00003f fd63                      	sbrc temp2,3
-000040 940c 0049                 	jmp botao_chamar1_ext_pressionado
-000042 fd64                      	sbrc temp2,4
-000043 940c 004b                 	jmp botao_chamar2_ext_pressionado
-000045 940c 004f                 	jmp end_handle_int0
+000059 b163                      	in temp2, PINB
+00005a 940e 0047                 	call delay20ms;Debouncing
+00005c fd60                      	sbrc temp2,0
+00005d 940c 0070                 	jmp botao_fechar_pressionado
+00005f fd62                      	sbrc temp2,2
+000060 940c 006a                 	jmp botao_chamar0_ext_pressionado
+000062 fd63                      	sbrc temp2,3
+000063 940c 006c                 	jmp botao_chamar1_ext_pressionado
+000065 fd64                      	sbrc temp2,4
+000066 940c 006e                 	jmp botao_chamar2_ext_pressionado
+000068 940c 0072                 	jmp end_handle_int0
                                  	botao_chamar0_ext_pressionado:
                                  
-000047 940c 004f                 		jmp end_handle_int0
+00006a 940c 0072                 		jmp end_handle_int0
                                  	botao_chamar1_ext_pressionado:
                                  
-000049 940c 004f                 		jmp end_handle_int0
+00006c 940c 0072                 		jmp end_handle_int0
                                  	botao_chamar2_ext_pressionado:
-                                 
-00004b 940c 004f                 		jmp end_handle_int0
+                                 		
+00006e 940c 0072                 		jmp end_handle_int0
                                  	botao_fechar_pressionado:
-                                 
-00004d 940c 004f                 		jmp end_handle_int0
+                                 		; TODO: FECHAR PORTA
+000070 940c 0072                 		jmp end_handle_int0
                                  
                                  	end_handle_int0:
-00004f 916f                      	pop temp2
+000072 916f                      	pop temp2
                                  	.undef temp2
-000050 9478                      	sei; TODO: Só religar essa interrupção
-000051 9518                      	reti
+000073 9478                      	sei; TODO: Só religar essa interrupção
+000074 9518                      	reti
                                  
                                  
                                  handle_INT2:
                                  	.def temp2 = r22;
-000052 94f8                      	cli ; TODO: Só desligar essa interrupção
-000053 936f                      	push temp2
+000075 94f8                      	cli ; TODO: Só desligar essa interrupção
+000076 936f                      	push temp2
                                  	;0 do Elevador = PD4 ; PCINT20
                                  	;1 do Elevador = PD5 ; PCINT21
                                  	;2 do Elevador = PD6 ; PCINT22
                                  	;Abrir do Elevador = PD7; PCINT23
-000054 b169                      	in temp2, PIND
-000055 940e 0026                 	call delay20ms;Debouncing
-000057 fd64                      	sbrc temp2,4
-000058 940c 0065                 	jmp botao_chamar0_in_pressionado
-00005a fd65                      	sbrc temp2,5
-00005b 940c 0067                 	jmp botao_chamar1_in_pressionado
-00005d fd66                      	sbrc temp2,6
-00005e 940c 0069                 	jmp botao_chamar2_in_pressionado
-000060 fd67                      	sbrc temp2,7
-000061 940c 006b                 	jmp botao_abrir_pressionado
-000063 940c 006d                 	jmp end_handle_int1
-                                 	botao_chamar0_in_pressionado:
-                                 
-000065 940c 006d                 		jmp end_handle_int1
+000077 b169                      	in temp2, PIND
+000078 940e 0047                 	call delay20ms;Debouncing
+00007a fd64                      	sbrc temp2,4
+00007b 940c 0088                 	jmp botao_chamar_I0_pressionado
+00007d fd65                      	sbrc temp2,5
+00007e 940c 008a                 	jmp botao_chamar1_in_pressionado
+000080 fd66                      	sbrc temp2,6
+000081 940c 008c                 	jmp botao_chamar2_in_pressionado
+000083 fd67                      	sbrc temp2,7
+000084 940c 008e                 	jmp botao_abrir_pressionado
+000086 940c 0090                 	jmp end_handle_int1
+                                 	botao_chamar_I0_pressionado:
+                                 		;TODO 
+000088 940c 0090                 		jmp end_handle_int1
                                  	botao_chamar1_in_pressionado:
                                  
-000067 940c 006d                 		jmp end_handle_int1
+00008a 940c 0090                 		jmp end_handle_int1
                                  	botao_chamar2_in_pressionado:
                                  
-000069 940c 006d                 		jmp end_handle_int1
+00008c 940c 0090                 		jmp end_handle_int1
                                  	botao_abrir_pressionado:
                                  
-00006b 940c 006d                 		jmp end_handle_int1
+00008e 940c 0090                 		jmp end_handle_int1
                                  
                                  	end_handle_int1:
-00006d 916f                      	pop temp2
+000090 916f                      	pop temp2
                                  	.undef temp2
-00006e 9478                      	sei; TODO: Só religar essa interrupção
-00006f 9518                      	reti
+000091 9478                      	sei; TODO: Só religar essa interrupção
+000092 9518                      	reti
                                  
                                  
                                  OC1A_Interrupt:
-000070 e001                      	ldi temp, 1
-000071 0000                      	nop
-000072 9518                      	reti
+000093 e001                      	ldi temp, 1
+000094 0000                      	nop
+000095 9518                      	reti
                                  ;A do BCD = PD2 ; PCINT18
                                  ;B do BCD = PD3 ; PCINT19
                                  ;0 do Elevador = PD4 ; PCINT20
@@ -1143,24 +1170,46 @@ AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elev
                                  ;sbi PORTD, 2
                                  ;cbi PORTD, 2
                                  
-                                 
-                                 
-                                 
                                  reset: 
-000073 94f8                      cli
+000096 94f8                      cli
+                                 
+000097 e5e4                      ldi zl,low(frase1*2)
+000098 e0f0                      ldi zh,high(frase1*2)
+000099 9104                      lpm temp, Z
+                                 
+                                 .equ UBRRvalue = 103
+                                 
+                                 ;USART_INIT
+                                 ;baud rate
+00009a e000                      ldi temp, high (UBRRvalue) 
+00009b 9300 00c5                 sts UBRR0H, temp
+00009d e607                      ldi temp, low (UBRRvalue)
+00009e 9300 00c4                 sts UBRR0L, temp
+                                 ;ENABLE TRANSMITTER
+0000a0 e008                      ldi temp, 1<<TXEN0
+0000a1 9300 00c1                 sts UCSR0B, temp
+                                 
+                                 ;8data, 1 stop, no parity
+0000a3 e006                      ldi temp, (3<<UCSZ00)
+0000a4 9300 00c2                 sts UCSR0C, temp
+                                 
+0000a6 e408                      ldi temp, (1<<TXCIE0)| (1 << TXEN0)
+0000a7 9300 00c1                 sts UCSR0B, temp; enable transmit and transmit interrupt
+                                 
+                                 
                                  ;Pin change Interrupt (23:16) and (0:7)
-000074 e005                      ldi temp, 0b00000101;
-000075 9300 0068                 sts PCICR, temp
+0000a9 e005                      ldi temp, 0b00000101;
+0000aa 9300 0068                 sts PCICR, temp
                                   
                                  ; Enables PCINT 4 TO 0, but 1 (the buzzer).
-000077 e10d                      ldi temp, 0b00011101;
+0000ac e10d                      ldi temp, 0b00011101;
                                  ;out PCMSK0, temp
-000078 9300 006b                 sts PCMSK0, temp 
+0000ad 9300 006b                 sts PCMSK0, temp 
                                  
                                  
                                  ; Enables PCINT 23 TO 20
-00007a ef00                      ldi temp, 0b11110000
-00007b 9300 006d                 sts PCMSK2, temp 
+0000af ef00                      ldi temp, 0b11110000
+0000b0 9300 006d                 sts PCMSK2, temp 
                                  
                                  #define CLOCK 16.0e6 ;clock speed
                                  .equ PRESCALE = 0b100 ;/256 prescale
@@ -1174,50 +1223,151 @@ AVRASM ver. 2.2.7  C:\Users\valdir\Documents\faculdade\micro\Elevador-Mitos\Elev
                                  .endif
                                  
                                  ;On MEGA series, write high byte of 16-bit timer registers first
-00007d e70a                      ldi temp, high(TOP) ;initialize compare value (TOP)
-00007e 9300 0089                 sts OCR1AH, temp
-000080 e102                      ldi temp, low(TOP)
-000081 9300 0088                 sts OCR1AL, temp
-000083 e000                      ldi temp, ((WGM&0b11) << WGM10) ;lower 2 bits of WGM 
-000084 9300 0080                 sts TCCR1A, temp
+0000b2 e70a                      ldi temp, high(TOP) ;initialize compare value (TOP)
+0000b3 9300 0089                 sts OCR1AH, temp
+0000b5 e102                      ldi temp, low(TOP)
+0000b6 9300 0088                 sts OCR1AL, temp
+0000b8 e000                      ldi temp, ((WGM&0b11) << WGM10) ;lower 2 bits of WGM 
+0000b9 9300 0080                 sts TCCR1A, temp
                                  ;upper 2 bits of WGM and clock select
-000086 940e 0018                 call startTimer
                                  
-000088 9100 006f                 lds r16, TIMSK1
-00008a 6002                      sbr r16, 1 <<OCIE1A
-00008b 9300 006f                 sts TIMSK1, r16
+0000bb 9100 006f                 lds r16, TIMSK1
+0000bd 6002                      sbr r16, 1 <<OCIE1A
+0000be 9300 006f                 sts TIMSK1, r16
                                  
                                  
                                  ;Stack initialization
-00008d ef0f                      ldi temp, low(RAMEND)
-00008e bf0d                      out SPL, temp
-00008f e008                      ldi temp, high(RAMEND)
-000090 bf0e                      out SPH, temp
+0000c0 ef0f                      ldi temp, low(RAMEND)
+0000c1 bf0d                      out SPL, temp
+0000c2 e008                      ldi temp, high(RAMEND)
+0000c3 bf0e                      out SPH, temp
                                  
-                                 ;getInts current values
-                                 ;in 
                                  
-000091 6041                      sbr flags, 1;  Inicia flags com porta fechada.
-000092 9478                      sei ;Enable Interrupts
+                                 
+0000c4 940e 0043                 call stopTimer    ; Timer 
+0000c6 940e 003d                 call resetTimer   ; Timer = Resetado
+0000c8 e010                      ldi andar, 0        ; Andar = 0
+0000c9 e041                      ldi flags, 0b00000001 ; Porta fechada e Parado.
+                                 
+0000ca 9478                      sei ;Enable Interrupts
                                  main:
                                  	; IF flagEstado==1 (Em movimento)
-000093 fd41                      	sbrc flags, flagsEstado
-000094 940c 009a                 	jmp estado_em_movimento
+0000cb fd41                      	sbrc flags, flagsEstado
+0000cc c008                      	rjmp estado_em_movimento
                                  		estado_parado:
-000096 ff40                      		sbrs flags, flagsPorta
-000097 940c 009b                 		jmp porta_aberta
-                                 		if_porta_fechada:
-                                 		; =1 Fechada
+0000cd ff40                      			sbrs flags, flagsPortaFechada ; 
+0000ce c007                      			rjmp if_porta_aberta
+                                 			if_porta_fechada:
+0000cf 1751                      				cp destino, andar
+0000d0 f029                      				breq if_parado_porta_aberta_ou_fechada
+                                 				if_porta_fechada_destino_diff_atual:
+0000d1 6042                      					sbr flags, 2 ; 0000 0010  = Ativa Estado em Movimento
+0000d2 df66                      					rcall startTimer
+0000d3 c002                      					rjmp if_parado_porta_aberta_ou_fechada	
                                  
-000099 cff9                      	rjmp main
+0000d4 cff6                      	rjmp main
                                  		estado_em_movimento:
-00009a cff8                      			rjmp main; Infinite Loop
-                                 		porta_aberta:
-00009b 3020                      			cpi botoes, 0 ; Algum botão pressionado
-00009c f3e4                      			brlt if_porta_fechada
-                                 			;StartTimer();
-                                 			
+0000d5 cff5                      			rjmp main;
+                                 		if_porta_aberta:
+                                 		if_parado_porta_aberta_ou_fechada:
+                                 			; Switch(andar)
+0000d6 3010                      			cpi andar, 0
+0000d7 f029                      			breq andar_0
+0000d8 3011                      			cpi andar, 1
+0000d9 f099                      			breq andar_1
+0000da 3012                      			cpi andar, 2
+0000db f119                      			breq andar_2
+0000dc cfee                      			rjmp main;
                                  
+                                 andar_0:
+                                 	; if (I0 || E0)
+                                 	; botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
+0000dd fd22                      	sbrc botoes, botoesI0  ; IF I0==1
+0000de c00a                      	rjmp andar_0_I0_E0
+0000df fd26                      	sbrc botoes, botoesE0
+0000e0 c008                      	rjmp andar_0_I0_E0
+                                  
+0000e1 fd20                      	sbrc botoes, botoesI2  ; IF I2==1
+0000e2 c008                      	rjmp andar_0_I2_E2
+0000e3 fd24                      	sbrc botoes, botoesE2
+0000e4 c006                      	rjmp andar_0_I2_E2
+                                 
+0000e5 fd21                      	sbrc botoes, botoesI1  ; IF I1==1
+0000e6 c004                      	rjmp andar_0_I1_E1
+0000e7 fd25                      	sbrc botoes, botoesE1
+0000e8 c002                      	rjmp andar_0_I1_E1
+                                 
+                                 	andar_0_I0_E0:
+                                 		;TODO: abre()
+0000e9 7f2e                      		cbr botoes, (1 << botoesE0)||(1<<botoesI0) ; Dá Clear nos botões E0(bit6) e I0(bit2). 
+                                 		;Produz uma máscara
+                                 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
+0000ea cfe0                      		rjmp main
+                                 	andar_0_I1_E1:
+                                 	andar_0_I2_E2:
+0000eb e051                      		ldi destino, 1
+0000ec cfde                      		rjmp main
+                                 	
+                                 andar_1:
+                                 	; botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
+0000ed fd21                      	sbrc botoes, botoesI1  ; IF I1==1
+0000ee c00a                      	rjmp andar_1_I1_E1
+0000ef fd25                      	sbrc botoes, botoesE1
+0000f0 c008                      	rjmp andar_1_I1_E1
+                                  
+0000f1 fd20                      	sbrc botoes, botoesI2  ; IF I2==1
+0000f2 cff8                      	rjmp andar_0_I2_E2
+0000f3 fd24                      	sbrc botoes, botoesE2
+0000f4 cff6                      	rjmp andar_0_I2_E2
+                                 
+0000f5 fd21                      	sbrc botoes, botoesI1  ; IF I1==1
+0000f6 cff4                      	rjmp andar_0_I1_E1
+0000f7 fd25                      	sbrc botoes, botoesE1
+0000f8 cff2                      	rjmp andar_0_I1_E1
+                                 
+                                 	andar_1_I1_E1:
+                                 		;TODO: abre()
+0000f9 7f2e                      		cbr botoes, (1 << botoesE1)||(1<<botoesI1) ; Dá Clear nos botões E1 e I1. 
+                                 		;Produz uma máscara
+                                 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
+0000fa cfd0                      		rjmp main
+                                 	andar_1_I2_E2:
+0000fb e052                      		ldi destino, 2
+0000fc cfce                      		rjmp main
+                                 	andar_1_I0_E0:
+0000fd e050                      		ldi destino, 0
+0000fe cfcc                      		rjmp main
+                                 
+                                 
+                                 andar_2:
+                                 	; botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
+0000ff fd20                      	sbrc botoes, botoesI2  ; IF I2==1
+000100 c00a                      	rjmp andar_2_I2_E2
+000101 fd24                      	sbrc botoes, botoesE2
+000102 c008                      	rjmp andar_2_I2_E2
+                                  
+000103 fd20                      	sbrc botoes, botoesI2  ; IF I2==1
+000104 cfe6                      	rjmp andar_0_I2_E2
+000105 fd24                      	sbrc botoes, botoesE2
+000106 cfe4                      	rjmp andar_0_I2_E2
+                                 
+000107 fd21                      	sbrc botoes, botoesI1  ; IF I1==1
+000108 cfe2                      	rjmp andar_0_I1_E1
+000109 fd25                      	sbrc botoes, botoesE1
+00010a cfe0                      	rjmp andar_0_I1_E1
+                                 
+                                 	andar_2_I2_E2:
+                                 		;TODO: abre()
+00010b 7f2e                      		cbr botoes, (1 << botoesE2)||(1<<botoesI2) ; Dá Clear nos botões E1 e I1. 
+                                 		;Produz uma máscara
+                                 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
+00010c cfbe                      		rjmp main
+                                 	andar_2_I1_E1:
+                                 	andar_2_I0_E0:
+00010d e051                      		ldi destino, 1
+00010e cfbc                      		rjmp main
+                                 
+                                 	
 
 
 RESOURCE USE INFORMATION
@@ -1235,40 +1385,40 @@ counted separately from r26..r31 here.
 .dseg memory usage only counts static data declared with .byte
 
 "ATmega328P" register use summary:
-x  :   0 y  :   0 z  :   0 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
+x  :   0 y  :   0 z  :   1 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
 r5 :   0 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   0 r11:   0 r12:   0 
-r13:   0 r14:   0 r15:   0 r16:  27 r17:   0 r18:   1 r19:   0 r20:   7 
-r21:   4 r22:  18 r23:   0 r24:   0 r25:   0 r26:   0 r27:   0 r28:   0 
-r29:   0 r30:   0 r31:   0 
-Registers used: 5 out of 35 (14.3%)
+r13:   0 r14:   0 r15:   0 r16:  38 r17:   5 r18:  21 r19:   0 r20:   8 
+r21:   9 r22:  18 r23:   0 r24:   0 r25:   0 r26:   0 r27:   0 r28:   0 
+r29:   0 r30:   1 r31:   1 
+Registers used: 9 out of 35 (25.7%)
 
 "ATmega328P" instruction use summary:
 .lds  :   0 .sts  :   0 adc   :   0 add   :   0 adiw  :   0 and   :   0 
 andi  :   0 asr   :   0 bclr  :   0 bld   :   0 brbc  :   0 brbs  :   0 
-brcc  :   1 brcs  :   0 break :   0 breq  :   0 brge  :   0 brhc  :   0 
-brhs  :   0 brid  :   0 brie  :   0 brlo  :   0 brlt  :   1 brmi  :   0 
+brcc  :   1 brcs  :   0 break :   0 breq  :   4 brge  :   0 brhc  :   0 
+brhs  :   0 brid  :   0 brie  :   0 brlo  :   0 brlt  :   0 brmi  :   0 
 brne  :   0 brpl  :   0 brsh  :   0 brtc  :   0 brts  :   0 brvc  :   0 
-brvs  :   0 bset  :   0 bst   :   0 call  :   3 cbi   :   0 cbr   :   0 
+brvs  :   0 bset  :   0 bst   :   0 call  :   4 cbi   :   0 cbr   :   3 
 clc   :   0 clh   :   0 cli   :   3 cln   :   0 clr   :   0 cls   :   0 
-clt   :   0 clv   :   0 clz   :   0 com   :   0 cp    :   0 cpc   :   0 
-cpi   :   1 cpse  :   0 dec   :   0 eor   :   0 fmul  :   0 fmuls :   0 
-fmulsu:   0 icall :   0 ijmp  :   0 in    :   2 inc   :   0 jmp   :  24 
-ld    :   0 ldd   :   0 ldi   :  15 lds   :   1 lpm   :   0 lsl   :   0 
+clt   :   0 clv   :   0 clz   :   0 com   :   0 cp    :   1 cpc   :   0 
+cpi   :   3 cpse  :   0 dec   :   0 eor   :   0 fmul  :   0 fmuls :   0 
+fmulsu:   0 icall :   0 ijmp  :   0 in    :   2 inc   :   0 jmp   :  23 
+ld    :   0 ldd   :   0 ldi   :  28 lds   :   1 lpm   :   2 lsl   :   0 
 lsr   :   0 mov   :   0 movw  :   0 mul   :   0 muls  :   0 mulsu :   0 
-neg   :   0 nop   :   1 or    :   0 ori   :   0 out   :   2 pop   :   5 
-push  :   5 rcall :   0 ret   :   4 reti  :   3 rjmp  :   3 rol   :   0 
+neg   :   0 nop   :   2 or    :   0 ori   :   0 out   :   2 pop   :   5 
+push  :   5 rcall :   1 ret   :   4 reti  :   4 rjmp  :  31 rol   :   0 
 ror   :   0 sbc   :   0 sbci  :   2 sbi   :   0 sbic  :   0 sbis  :   0 
-sbiw  :   0 sbr   :   2 sbrc  :   9 sbrs  :   1 sec   :   0 seh   :   0 
+sbiw  :   0 sbr   :   2 sbrc  :  27 sbrs  :   1 sec   :   0 seh   :   0 
 sei   :   3 sen   :   0 ser   :   0 ses   :   0 set   :   0 sev   :   0 
-sez   :   0 sleep :   0 spm   :   0 st    :   0 std   :   0 sts   :  11 
+sez   :   0 sleep :   0 spm   :   0 st    :   0 std   :   0 sts   :  16 
 sub   :   0 subi  :   1 swap  :   0 tst   :   0 wdr   :   0 
-Instructions used: 23 out of 113 (20.4%)
+Instructions used: 27 out of 113 (23.9%)
 
 "ATmega328P" memory use summary [bytes]:
 Segment   Begin    End      Code   Data   Used    Size   Use%
 ---------------------------------------------------------------
-[.cseg] 0x000000 0x00013c    284      0    284   32768   0.9%
+[.cseg] 0x000000 0x00021e    448     30    478   32768   1.5%
 [.dseg] 0x000100 0x000100      0      0      0    2048   0.0%
 [.eseg] 0x000000 0x000000      0      0      0    1024   0.0%
 
-Assembly complete, 0 errors, 0 warnings
+Assembly complete, 0 errors, 1 warnings
