@@ -26,13 +26,23 @@
 
 
 
-frase1: .db "Portas  Fechando"
-frase2: .db "Portas Abrindo"
+frase1: .db "A",'\n'
+.equ sizeFrase1 = 2 
+ 
+frase2: .db "F",'\n'
+.equ sizeFrase2 = 2 
+
+frase3: .db "ESTA PARADO'\n'"
+.equ sizeFrase3 = 5 
+
 ; TODO: Escrever todas frases.
 
 .def andar = r17
 .def temp = r16
-
+.def temp2 = r22
+.def temp3 = r24
+.def temp4 = r25
+.def contadorSerial = r23
 .def botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
 .equ botoesE0 = 6
 .equ botoesE1 = 5
@@ -51,12 +61,28 @@ frase2: .db "Portas Abrindo"
 .def destino = r21
 
 
+escreve_frase: ; assume frase em Z e size em r28, usa temp4
+  pop r1
+  pop r2
+  sub zl, temp4
+  sbci zh, 0
+  do:
+  dec r28
+  wait:
+	lpm temp4, z
+	sbiw ZH:ZL, 1
+	sts UDR0, temp4;
+	cpi r28,0
+	brne do
+
+  push r2
+  push r1
+
+ret 
 
 
 atualiza_display:
-	.def temp2 = r22
-	push temp2
-	in temp, PIND
+	in temp, PORTD
 	cpi andar, 0
 	breq atualiza_0
 	cpi andar, 1
@@ -65,7 +91,7 @@ atualiza_display:
 	breq atualiza_2
 	jmp end_atualiza
 	atualiza_0:
-		cbr temp, (1 << A) || (1 << B)
+		cbr temp, (1 << A) | (1 << B)
 		jmp end_atualiza
 	atualiza_1:
 		cbr temp, (1 << B)
@@ -79,36 +105,38 @@ atualiza_display:
 	; PORTD = xxxxABxx
 	end_atualiza:
 	out PORTD, temp
-	pop temp2
-	.undef temp2
 	ret
 	; A = 3 PD3
 	; B = 2 PD2
 
 liga_led:
-	in temp, PINB
+	in temp, PORTB
 	sbr temp, ( 1<<5) ; Seta pino do led ON
 	out PORTB, temp
 	ret
 
 apaga_led:
-	in temp, PINB
+	in temp, PORTB
 	cbr temp, ( 1<<5 ) ; Seta pino do led OFF
 	out PORTB, temp
 	ret
 
 liga_buzzer:
-	in temp, PINB
+	in temp, PORTB
 	sbr temp, (1<< 1) ;Buzzer ON
 	out PORTB, temp
 	ret
 apaga_buzzer:
-	in temp, PINB
+	in temp, PORTB
 	cbr temp, (1<< 1) ;Buzzer OFF
 	out PORTB, temp
 	ret
 
 abre:
+	ldi r28, sizeFrase1
+	ldi zl,low(frase1*2)
+	ldi zh,high(frase1*2)
+	call escreve_frase
 	call resetTimer
 	cbr flags, (1 <<flagsPortaFechada)
 	call liga_led
@@ -116,10 +144,10 @@ abre:
 	ret
 
 fecha:
+
 	sbr flags, (1 <<flagsPortaFechada)
-	in temp, PINB
-	cbr temp, ( 1<<5 || 1<< 1) ; Seta pino do led OFF e Buzzer OFF
-	out PORTB, temp
+	call apaga_buzzer
+	call apaga_led
 	call stopTimer
 	call resetTimer
 	ret
@@ -157,16 +185,44 @@ delay20ms:
 	pop r22
 	ret
 
+
+disable_transmit_interrupt:
+	push temp
+	ldi temp, 0
+	sts UCSR0B, temp; 
+	pop temp
+	ret
+enable_transmit_interrupt:
+	push temp
+	ldi temp, (1<<TXCIE0)|(1 << TXEN0)
+	sts UCSR0B, temp; enable transmit and transmit interrupt
+	pop temp
+	ret
 USART_TX_Complete:
-	; TODO; Fazer instrucao
-	nop
+	reti
+	cli
+	cpi contadorSerial,0
+	breq tx_0 ; IF ==0
+	
+	;Getting PC
+	pop temp   
+	pop temp2
+
+	pop temp3 ;Getting data
+	sts UDR0, temp3;
+	dec contadorSerial ; contadorSerial--
+	;Putting PC back on the stack
+	push temp
+	push temp2
+	tx_0:
+		;call disable_transmit_interrupt
+	end_tx:
+	sei
 	reti
 
 
 handle_INT0:
-	.def temp2 = r22;
 	cli ; TODO: Só desligar essa interrupção
-	push temp2
 	; Fechar do Elevador = PB0; PCINT0
 	; Chamar 0 = PB2; PCINT2
 	; Chamar 1 = PB3; PCINT3 
@@ -183,6 +239,7 @@ handle_INT0:
 	jmp botao_chamar2_ext_pressionado
 	jmp end_handle_int0
 	botao_chamar0_ext_pressionado:
+		call liga_led
 		sbr botoes, ( 1<<botoesE0)
 		jmp end_handle_int0
 	botao_chamar1_ext_pressionado:
@@ -192,6 +249,10 @@ handle_INT0:
 		sbr botoes, ( 1<<botoesE2)
 		jmp end_handle_int0
 	botao_fechar_pressionado:
+		;TODO apagar
+		ldi temp3,0x0F
+		sts UDR0, temp3;
+	
 		sbrc flags, flagsPortaFechada
 		jmp end_handle_int0
 		sbrs flags, flagsEstado
@@ -199,22 +260,35 @@ handle_INT0:
 		jmp end_handle_int0
 
 	end_handle_int0:
-	pop temp2
-	.undef temp2
 	sei
 	reti
 
 
 handle_INT2:
-	.def temp2 = r22;
 	cli 
-	push temp2
+	call delay20ms;Debouncing
+	;call delay20ms;
 	;0 do Elevador = PD4 ; PCINT20
 	;1 do Elevador = PD5 ; PCINT21
 	;2 do Elevador = PD6 ; PCINT22
 	;Abrir do Elevador = PD7; PCINT23
+
+;	ldi temp, sizeFrase1
+;	ldi zl,low(frase1*2)
+;	ldi zh,high(frase1*2)
+;	do:
+;	dec temp
+;	wait:
+;	lds temp2, UCSR0A
+;	sbrs temp2, UDRE0
+;	rjmp wait 
+;	lpm temp3, Z+
+;	sts UDR0, temp3;
+;	cpi temp,0
+;	brne do
+
 	in temp2, PIND
-	call delay20ms;Debouncing
+	
 	
 	sbrc temp2,4 
 	jmp botao_chamar_I0_pressionado
@@ -244,8 +318,6 @@ handle_INT2:
 		jmp end_handle_int1
 
 	end_handle_int1:
-	pop temp2
-	.undef temp2
 	sei
 	reti
 
@@ -309,8 +381,8 @@ OC1A_Interrupt:
 reset: 
 cli
 
-;CONFIG PORTB E PORTD como entrada e saida
-ldi temp,0b00100010
+;CONFIG PORTB E PORTD como entrada(0) e saida(1)
+ldi temp, 0b00100010
 out DDRB, temp
 ldi temp, 0b00001100
 out DDRD, temp
@@ -323,23 +395,44 @@ lpm temp, Z
 
 .equ UBRRvalue = 103
 ;USART_INIT
-;baud rate
-ldi temp, high (UBRRvalue) 
+
+;;;
+
+;initialize USART
+ldi temp, high (UBRRvalue) ;baud rate
 sts UBRR0H, temp
 ldi temp, low (UBRRvalue)
 sts UBRR0L, temp
-;ENABLE TRANSMITTER
-ldi temp, 1<<TXEN0
-sts UCSR0B, temp
+
+;URSEL 0 = UBRRH, 1 = UCSRC (shared port address)
+;UMSEL 0 = Asynchronous, 1 = Synchronous
+;USBS 0 = One stop bit, 1 = Two stop bits
+;UCSZ0:1 Character Size: 0 = 5, 1 = 6, 2 = 7, 3 = 8
+;UPM0:1 0 = none, 1 = reserved, 2 = Even, 3 = Odd
 
 ;8data, 1 stop, no parity
 ldi temp, (3<<UCSZ00)
 sts UCSR0C, temp
 
-ldi temp, (1<<TXCIE0)| (1 << TXEN0)
-sts UCSR0B, temp; enable transmit and transmit interrupt
+
+ldi temp, (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)
+sts UCSR0B, temp; enable receive and transmit and interrupt on rx
+
+;;;
 
 
+;baud rate
+ldi temp, high (UBRRvalue) 
+sts UBRR0H, temp
+ldi temp, low (UBRRvalue)
+sts UBRR0L, temp
+
+
+;8data, 1 stop, no parity
+ldi temp, (3<<UCSZ00)
+sts UCSR0C, temp
+
+call enable_transmit_interrupt
 ;Pin change Interrupt (23:16) and (0:7)
 ldi temp, 0b00000101;
 sts PCICR, temp
@@ -358,10 +451,10 @@ sts PCMSK2, temp
 .equ PRESCALE = 0b100 ;/256 prescale
 .equ PRESCALE_DIV = 256
 
-#define DELAY 0.2 ;seconds
+#define DELAY 1 ;seconds
 .equ WGM = 0b0100 ;Waveform generation mode: CTC
 ;you must ensure this value is between 0 and 65535
-.equ TOP = int(0.2 + ((CLOCK/PRESCALE_DIV)*DELAY))
+.equ TOP = int(0.5 + ((CLOCK/PRESCALE_DIV)*DELAY))
 .if TOP > 65535
 .error "TOP is out of range"
 .endif
@@ -388,14 +481,19 @@ out SPH, temp
 
 
 
+
 call stopTimer    ; Timer 
 call resetTimer   ; Timer = Resetado
 ldi andar, 0        ; Andar = 0
 ldi flags, 0b00000001 ; Porta fechada e Parado.
+call fecha
+ldi contadorSerial,0
+;TODO DELETA
 
+sts UDR0, r30;
 sei ;Enable Interrupts
 main:
-
+call atualiza_display
 ;TODO: Ficar printando andar no display usando PIND/B  e PORTD/B
 	; IF flagEstado==1 (Em movimento)
 	sbrc flags, flagsEstado
@@ -426,7 +524,7 @@ main:
 			rjmp main;
 
 andar_0:
-	; if (I0 || E0)
+	; if (I0 | E0)
 	; botoes = r18  ;0b  0-E0-E1-E2 0-I0-I1-I2
 	sbrc botoes, botoesI0  ; IF I0==1
 	rjmp andar_0_I0_E0
@@ -445,7 +543,7 @@ andar_0:
 	rjmp main
 	andar_0_I0_E0:
 		call abre
-		cbr botoes, (1 << botoesE0)||(1<<botoesI0) ; Dá Clear nos botões E0(bit6) e I0(bit2). 
+		cbr botoes, (1 << botoesE0)|(1<<botoesI0) ; Dá Clear nos botões E0(bit6) e I0(bit2). 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
 		rjmp main
@@ -473,7 +571,8 @@ andar_1:
 
 	andar_1_I1_E1:
 		call abre
-		cbr botoes, (1 << botoesE1)||(1<<botoesI1) ; Dá Clear nos botões E1 e I1. 
+		ldi temp3, (1 << botoesE1)|(1<<botoesI1)
+		cbr botoes, (1 << botoesE1)|(1<<botoesI1) ; Dá Clear nos botões E1 e I1. 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
 		rjmp main
@@ -504,7 +603,7 @@ andar_2:
 
 	andar_2_I2_E2:
 		call abre
-		cbr botoes, (1 << botoesE2)||(1<<botoesI2) ; Dá Clear nos botões E1 e I1. 
+		cbr botoes, (1 << botoesE2)|(1<<botoesI2) ; Dá Clear nos botões E1 e I1. 
 		;Produz uma máscara
 		; Fazendo shift em cada posição de BIT.  Depois zera onde é 1.		
 		rjmp main
